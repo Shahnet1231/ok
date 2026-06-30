@@ -2758,6 +2758,19 @@ body.printing-barcode-labels { page: barcode; }
 
             <div class="settings-section" style="border:1.5px solid rgba(239,68,68,0.4);border-radius:var(--radius);padding:16px;background:rgba(239,68,68,0.04)">
               <h3 style="color:var(--danger)"><i class="fas fa-exclamation-triangle"></i> Danger Zone</h3>
+
+              <div style="margin-bottom:16px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+                <label style="font-size:12px;font-weight:700;color:var(--text)">Hard Reset PIN Change Karein</label>
+                <p style="font-size:11px;color:var(--text2);margin:4px 0 8px">Yeh PIN data delete karne se pehle maanga jata hai. Sirf Admin ko pata hona chahiye.</p>
+                <div style="display:flex;gap:8px">
+                  <input type="text" id="newHardResetPin" placeholder="Naya PIN (min 4 digit)" maxlength="10"
+                    style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);font-size:13px;outline:none">
+                  <button class="btn btn-blue btn-sm" onclick="const v=document.getElementById('newHardResetPin').value.trim(); if(setHardResetPin(v)){document.getElementById('newHardResetPin').value='';}">
+                    <i class="fas fa-save"></i> Update PIN
+                  </button>
+                </div>
+              </div>
+
               <p style="font-size:12px;color:var(--text2);margin:6px 0 14px">
                 Yeh action <strong>sara data permanently delete</strong> kar dega — Products, Customers, Suppliers, Sales, Purchases, Expenses, Tokens, sab kuch. <strong>Wapas nahi aa sakta.</strong>
               </p>
@@ -4337,8 +4350,17 @@ function lowStockThresholdFor(p) {
     : CONFIG.lowStockThreshold;
 }
 function todayStr() { return new Date().toISOString().split('T')[0]; }
-function fmt(n) { return CONFIG.currency + ' ' + (n || 0).toLocaleString('en-PK'); }
-function fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-PK') : '--'; }
+function fmt(n) {
+  const num = Number(n);
+  const safe = isNaN(num) ? 0 : num;
+  return (CONFIG.currency || 'Rs') + ' ' + safe.toLocaleString('en-PK');
+}
+function fmtDate(d) {
+  if (!d) return '--';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return '--';
+  return dt.toLocaleDateString('en-PK');
+}
 
 function showToast(msg, type = 'success') {
   const icons = { success:'fa-check-circle', error:'fa-times-circle', warning:'fa-exclamation-triangle', info:'fa-info-circle' };
@@ -4600,13 +4622,19 @@ function showPage(name) {
     auditLog: renderAuditLog,
     settings: renderSettings
   };
-  if (renderers[name]) renderers[name]();
+  if (renderers[name]) {
+    try { renderers[name](); }
+    catch (err) {
+      console.error('Render error on page "' + name + '":', err);
+      showToast('Page load karne mein masla hua. Refresh karein.', 'error');
+    }
+  }
 }
 
 function applyTheme() {
   document.documentElement.setAttribute('data-theme', STATE.theme);
   const btn = document.getElementById('themeBtn');
-  btn.innerHTML = STATE.theme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  if (btn) btn.innerHTML = STATE.theme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
   const sw = document.getElementById('setDarkMode');
   if (sw) sw.checked = STATE.theme === 'dark';
 }
@@ -4618,7 +4646,7 @@ function toggleTheme() {
 function applyLang() {
   document.documentElement.setAttribute('data-lang', STATE.lang);
   const btn = document.getElementById('langBtn');
-  btn.textContent = STATE.lang === 'ur' ? 'UR' : 'EN';
+  if (btn) btn.textContent = STATE.lang === 'ur' ? 'UR' : 'EN';
   const sw = document.getElementById('setLang');
   if (sw) sw.checked = STATE.lang === 'en';
 }
@@ -5164,36 +5192,46 @@ function custSearchFn(q) {
 }
 
 function selectCustomer(id, name, mobile) {
-  document.getElementById('saleCustomerId').value = id;
-  document.getElementById('saleCustomerName').value = name;
-  document.getElementById('custSearchInp').value = '';
+  const idInp   = document.getElementById('saleCustomerId');
+  const nameInp = document.getElementById('saleCustomerName');
+  const searchInp = document.getElementById('custSearchInp');
   const dd = document.getElementById('custDropdown');
+  const chip = document.getElementById('custSelectedChip');
+
+  if (idInp)   idInp.value = id || '';
+  if (nameInp) nameInp.value = name || '';
+  if (searchInp) searchInp.value = '';
   if (dd) { dd.classList.remove('show'); dd.innerHTML = ''; }
 
-  const chip = document.getElementById('custSelectedChip');
   const icon = id ? 'fa-user' : 'fa-walking';
   const color = id ? 'var(--primary)' : 'var(--text2)';
 
-  const cust = STATE.customers.find(function(c){ return c.id === id; });
+  const cust = (STATE.customers || []).find(function(c){ return c.id === id; });
   const prevBal = cust ? (cust.balance || 0) : 0;
   const balBadge = prevBal > 0
     ? ' <span style="background:rgba(239,68,68,0.12);color:var(--danger);padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700">Balance: ' + fmt(prevBal) + '</span>'
     : '';
 
-  chip.innerHTML =
-    '<span class="cust-selected-chip" style="border-color:' + color + ';color:' + color + ';background:' + (id?'var(--primary-light)':'var(--bg3)') + '">' +
-    '<i class="fas ' + icon + '"></i> ' + name + (mobile ? ' ('+mobile+')' : '') + balBadge +
-    '<button onclick="clearCustomer()" title="Change"><i class="fas fa-times"></i></button></span>';
+  if (chip) {
+    chip.innerHTML =
+      '<span class="cust-selected-chip" style="border-color:' + color + ';color:' + color + ';background:' + (id?'var(--primary-light)':'var(--bg3)') + '">' +
+      '<i class="fas ' + icon + '"></i> ' + (name||'') + (mobile ? ' ('+mobile+')' : '') + balBadge +
+      '<button onclick="clearCustomer()" title="Change"><i class="fas fa-times"></i></button></span>';
+  }
 
   calcSaleBalance();
 }
 
 function clearCustomer() {
-  document.getElementById('saleCustomerId').value = '';
-  document.getElementById('saleCustomerName').value = '';
-  document.getElementById('custSelectedChip').innerHTML = '';
-  document.getElementById('custSearchInp').value = '';
-  document.getElementById('custSearchInp').focus();
+  const idInp   = document.getElementById('saleCustomerId');
+  const nameInp = document.getElementById('saleCustomerName');
+  const chip    = document.getElementById('custSelectedChip');
+  const searchInp = document.getElementById('custSearchInp');
+
+  if (idInp)   idInp.value = '';
+  if (nameInp) nameInp.value = '';
+  if (chip)    chip.innerHTML = '';
+  if (searchInp) { searchInp.value = ''; searchInp.focus(); }
 
   const pr = document.getElementById('salePrevBalRow');
   const py = document.getElementById('salePayableRow');
@@ -5459,53 +5497,53 @@ function calcSaleTotal() {
 }
 
 function calcSaleBalance() {
-  const billTotal = parseFloat(document.getElementById('saleFinalTotal')?.textContent?.replace(/[^0-9.]/g,'') || 0);
-  const paid      = parseFloat(document.getElementById('saleAmountPaid')?.value || 0);
+  const billTotal = parseFloat(document.getElementById('saleFinalTotal')?.textContent?.replace(/[^0-9.]/g,'') || 0) || 0;
+  const paid      = parseFloat(document.getElementById('saleAmountPaid')?.value || 0) || 0;
 
   const custId = document.getElementById('saleCustomerId')?.value || '';
-  const cust   = STATE.customers.find(function(c){ return c.id === custId; });
+  const cust   = (STATE.customers || []).find(function(c){ return c.id === custId; });
   const prevBal = cust ? (cust.balance || 0) : 0;
 
-  const prevRow = document.getElementById('salePrevBalRow');
-  const payableRow = document.getElementById('salePayableRow');
+  const prevRow     = document.getElementById('salePrevBalRow');
+  const payableRow  = document.getElementById('salePayableRow');
+  const prevBalEl   = document.getElementById('salePrevBal');
+  const payableAmtEl = document.getElementById('salePayableAmt');
+
   if (prevBal > 0) {
-    document.getElementById('salePrevBal').textContent = fmt(prevBal);
-    prevRow.style.display = '';
+    if (prevBalEl) prevBalEl.textContent = fmt(prevBal);
+    if (prevRow) prevRow.style.display = '';
     const kul = prevBal + billTotal;
-    document.getElementById('salePayableAmt').textContent = fmt(kul);
-    payableRow.style.display = '';
+    if (payableAmtEl) payableAmtEl.textContent = fmt(kul);
+    if (payableRow) payableRow.style.display = '';
   } else {
-    prevRow.style.display = 'none';
-    payableRow.style.display = 'none';
+    if (prevRow) prevRow.style.display = 'none';
+    if (payableRow) payableRow.style.display = 'none';
   }
 
   const change = paid - billTotal;
   const remaining = billTotal - paid;
-  const remRow = document.getElementById('saleRemainingRow');
+  const remRow   = document.getElementById('saleRemainingRow');
   const changeEl = document.getElementById('saleChange');
+  const remAmtEl = document.getElementById('saleRemainingAmt');
 
   if (paid > 0 && paid < billTotal) {
-
-    document.getElementById('saleRemainingAmt').textContent = fmt(remaining);
-    remRow.style.display = '';
-    changeEl.textContent = 'Rs 0';
-    changeEl.style.color = 'var(--text2)';
+    if (remAmtEl) remAmtEl.textContent = fmt(remaining);
+    if (remRow) remRow.style.display = '';
+    if (changeEl) { changeEl.textContent = 'Rs 0'; changeEl.style.color = 'var(--text2)'; }
   } else if (paid >= billTotal && paid > 0) {
-
-    remRow.style.display = 'none';
-    changeEl.textContent = fmt(change);
-    changeEl.style.color = change > 0 ? 'var(--success)' : 'var(--text2)';
+    if (remRow) remRow.style.display = 'none';
+    if (changeEl) { changeEl.textContent = fmt(change); changeEl.style.color = change > 0 ? 'var(--success)' : 'var(--text2)'; }
   } else {
-    remRow.style.display = 'none';
-    changeEl.textContent = 'Rs 0';
-    changeEl.style.color = 'var(--text2)';
+    if (remRow) remRow.style.display = 'none';
+    if (changeEl) { changeEl.textContent = 'Rs 0'; changeEl.style.color = 'var(--text2)'; }
   }
 }
 
 function calcChange() { calcSaleBalance(); }
 
 function toggleTxnId(val) {
-  document.getElementById('txnIdField').style.display = val === 'Online' ? 'block' : 'none';
+  const el = document.getElementById('txnIdField');
+  if (el) el.style.display = val === 'Online' ? 'block' : 'none';
 }
 
 async function saveSale(action = 'complete') {
@@ -5880,27 +5918,39 @@ function suppSearchFn(q) {
 }
 
 function selectSupplier(id, name, mobile) {
-  document.getElementById('purchaseSupplierId').value = id;
-  document.getElementById('purchaseSupplierName').value = name;
-  document.getElementById('suppSearchInp').value = '';
-  document.getElementById('suppDropdown').classList.remove('show');
+  const idInp   = document.getElementById('purchaseSupplierId');
+  const nameInp = document.getElementById('purchaseSupplierName');
+  const searchInp = document.getElementById('suppSearchInp');
+  const dropdown  = document.getElementById('suppDropdown');
+  const chip      = document.getElementById('suppSelectedChip');
 
-  const chip = document.getElementById('suppSelectedChip');
-  const color = id ? 'var(--danger)' : 'var(--text2)';
-  chip.innerHTML = `
-    <span class="cust-selected-chip" style="border-color:${color};color:${color};background:${id?'rgba(239,68,68,0.08)':'var(--bg3)'}">
-      <i class="fas ${id?'fa-industry':'fa-store'}"></i> ${name} ${mobile ? '('+mobile+')' : ''}
-      <button onclick="clearSupplier()" title="Change"><i class="fas fa-times"></i></button>
-    </span>`;
+  if (idInp)   idInp.value = id || '';
+  if (nameInp) nameInp.value = name || '';
+  if (searchInp) searchInp.value = '';
+  if (dropdown)  dropdown.classList.remove('show');
+
+  if (chip) {
+    const color = id ? 'var(--danger)' : 'var(--text2)';
+    chip.innerHTML = `
+      <span class="cust-selected-chip" style="border-color:${color};color:${color};background:${id?'rgba(239,68,68,0.08)':'var(--bg3)'}">
+        <i class="fas ${id?'fa-industry':'fa-store'}"></i> ${name||''} ${mobile ? '('+mobile+')' : ''}
+        <button onclick="clearSupplier()" title="Change"><i class="fas fa-times"></i></button>
+      </span>`;
+  }
 }
 
 function clearSupplier() {
-  document.getElementById('purchaseSupplierId').value = '';
-  document.getElementById('purchaseSupplierName').value = '';
-  document.getElementById('suppSelectedChip').innerHTML = '';
-  document.getElementById('suppSearchInp').value = '';
-  const si = document.getElementById('suppSearchIcon'); if(si) si.style.display='block';
-  document.getElementById('suppSearchInp').focus();
+  const idInp   = document.getElementById('purchaseSupplierId');
+  const nameInp = document.getElementById('purchaseSupplierName');
+  const chip    = document.getElementById('suppSelectedChip');
+  const searchInp = document.getElementById('suppSearchInp');
+  const icon      = document.getElementById('suppSearchIcon');
+
+  if (idInp)   idInp.value = '';
+  if (nameInp) nameInp.value = '';
+  if (chip)    chip.innerHTML = '';
+  if (searchInp) { searchInp.value = ''; searchInp.focus(); }
+  if (icon) icon.style.display = 'block';
 }
 
 document.addEventListener('click', e => {
@@ -6203,8 +6253,10 @@ function calcPurchaseTotal() {
     const tc = row.querySelector('.prow-total');
     if (tc) tc.textContent = fmt(t);
   });
-  document.getElementById('purchaseTotal').textContent     = fmt(grandTotal);
-  document.getElementById('purchaseItemCount').textContent = itemCount + ' items';
+  const totalEl = document.getElementById('purchaseTotal');
+  const countEl = document.getElementById('purchaseItemCount');
+  if (totalEl) totalEl.textContent = fmt(grandTotal);
+  if (countEl) countEl.textContent = itemCount + ' items';
 }
 
 async function savePurchase() {
@@ -9885,21 +9937,35 @@ function exportTokens() {
   exportExcel(data, 'Repair_Tokens');
 }
 
-const HARD_RESET_PIN = '5110';
+// Hard Reset PIN — default 5110, but changeable from Settings.
+// Stored in localStorage so each device/admin can set their own PIN.
+function getHardResetPin() {
+  return localStorage.getItem('hardResetPin') || '5110';
+}
+function setHardResetPin(newPin) {
+  if (!newPin || newPin.length < 4) { showToast('PIN kam se kam 4 digit ka hona chahiye!', 'error'); return false; }
+  localStorage.setItem('hardResetPin', newPin);
+  if (CONFIG.scriptUrl) apiPost('saveSetting', { key: 'hardResetPin', value: newPin });
+  showToast('Hard Reset PIN update ho gaya! \u2713', 'success');
+  return true;
+}
 
 function openHardResetModal() {
-  document.getElementById('hardResetPin').value = '';
-  document.getElementById('hardResetErr').style.display = 'none';
+  const pinInp = document.getElementById('hardResetPin');
+  const errEl  = document.getElementById('hardResetErr');
+  if (pinInp) pinInp.value = '';
+  if (errEl) errEl.style.display = 'none';
   openModal('hardResetModal');
   setTimeout(function(){ document.getElementById('hardResetPin')?.focus(); }, 150);
 }
 
 async function confirmHardReset() {
-  const pin = document.getElementById('hardResetPin').value.trim();
-  if (pin !== HARD_RESET_PIN) {
-    document.getElementById('hardResetErr').style.display = 'block';
-    document.getElementById('hardResetPin').value = '';
-    document.getElementById('hardResetPin').focus();
+  const pinInp = document.getElementById('hardResetPin');
+  const errEl  = document.getElementById('hardResetErr');
+  const pin = pinInp ? pinInp.value.trim() : '';
+  if (pin !== getHardResetPin()) {
+    if (errEl) errEl.style.display = 'block';
+    if (pinInp) { pinInp.value = ''; pinInp.focus(); }
     return;
   }
 
