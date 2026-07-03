@@ -2994,8 +2994,9 @@ var JsBarcode = BarcodeGen.render;
         <i class="fas fa-receipt" style="color:var(--primary);margin-right:6px"></i>
         <span class="lang-ur">نئی سیل</span><span class="lang-en">New Sale</span>
       </h2>
-      <button class="modal-close" onclick="closeModal('saleModal')"><i class="fas fa-times"></i></button>
+      <button class="modal-close" onclick="closeSaleModal()"><i class="fas fa-times"></i></button>
     </div>
+    <div id="saleTabsBar" style="display:flex;gap:6px;overflow-x:auto;padding:10px 16px;border-bottom:1.5px solid var(--border);background:var(--bg-secondary)"></div>
     <div class="modal-body">
 
       <div class="form-row" style="align-items:flex-end">
@@ -3020,6 +3021,11 @@ var JsBarcode = BarcodeGen.render;
               style="background:var(--success);color:white;flex-shrink:0;padding:9px 12px"
               onclick="openQuickAddCustomer()">
               <i class="fas fa-plus"></i>
+            </button>
+            <button type="button" class="btn btn-sm" title="Naya Bill Shuru Karein (Purana Bill Tab Mein Mehfooz Rahega)"
+              style="background:var(--warning);color:white;flex-shrink:0;padding:9px 12px"
+              onclick="addNewTab()">
+              <i class="fas fa-plus-circle"></i>
             </button>
           </div>
           <div id="custSelectedChip" style="margin-top:4px"></div>
@@ -3120,7 +3126,7 @@ var JsBarcode = BarcodeGen.render;
     </div>
 
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('saleModal')">Cancel</button>
+      <button class="btn btn-ghost" onclick="closeSaleModal()">Cancel</button>
       <button class="btn btn-outline btn-sm" onclick="saveSale('draft')"><i class="fas fa-save"></i> Draft</button>
       <button class="btn btn-blue" onclick="saveSale('complete')">
         <i class="fas fa-check"></i>
@@ -3128,6 +3134,43 @@ var JsBarcode = BarcodeGen.render;
       </button>
       <button class="btn btn-green" onclick="saveSale('print')">
         <i class="fas fa-print"></i> Print Invoice
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="deleteProductPinModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" style="color:var(--danger)">
+        <i class="fas fa-trash-alt"></i> Stock Delete — PIN Verify Karein
+      </h2>
+      <button class="modal-close" onclick="closeModal('deleteProductPinModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="background:rgba(239,68,68,0.08);border:1.5px solid rgba(239,68,68,0.3);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px">
+        <p style="font-size:13px;color:var(--danger);font-weight:700;margin:0 0 8px">
+          <i class="fas fa-exclamation-triangle"></i> WARNING!
+        </p>
+        <p style="font-size:12px;color:var(--text2);margin:0">
+          Yeh product <strong id="delProdName"></strong> permanently Stock list se delete ho jayega
+          (local + Google Sheet dono se). Iski history Recycle Bin mein chali jayegi.
+        </p>
+      </div>
+      <div class="form-field">
+        <label>Security PIN Daalen</label>
+        <input type="password" id="delProdPin" placeholder="••••" maxlength="10" inputmode="numeric"
+          style="font-size:20px;font-weight:800;text-align:center;letter-spacing:6px;border-color:rgba(239,68,68,0.4)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();confirmDeleteProductPin();}">
+      </div>
+      <div id="delProdErr" style="color:var(--danger);font-size:12px;margin-top:6px;display:none">
+        <i class="fas fa-times-circle"></i> Galat PIN! Dobara koshish karein.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('deleteProductPinModal')">Cancel</button>
+      <button class="btn" style="background:var(--danger);color:white" onclick="confirmDeleteProductPin()">
+        <i class="fas fa-trash-alt"></i> Product Delete Karein
       </button>
     </div>
   </div>
@@ -4062,19 +4105,27 @@ var JsBarcode = BarcodeGen.render;
         <i class="fas fa-ticket-alt" style="color:var(--primary);margin-right:6px"></i>
         <span class="lang-ur">رپیئر ٹوکن</span><span class="lang-en">Repair Token</span>
       </h2>
-      <button class="modal-close" onclick="closeModal('tokenModal')"><i class="fas fa-times"></i></button>
+      <button class="modal-close" onclick="closeTokenModal()"><i class="fas fa-times"></i></button>
     </div>
+    <div id="tokenTabsBar" style="display:none;gap:6px;overflow-x:auto;padding:10px 16px;border-bottom:1.5px solid var(--border);background:var(--bg-secondary)"></div>
     <div class="modal-body">
       <input type="hidden" id="tokenId">
 
       <div class="form-field">
         <label><i class="fas fa-user" style="color:var(--primary);margin-right:4px"></i> Customer</label>
-        <div class="cust-search-wrap">
-          <i class="fas fa-search cust-search-icon"></i>
-          <input type="text" class="cust-search-input" id="tokSuppSearchInp"
-            placeholder="Naam ya Mobile likhen..."
-            oninput="tokenCustSearch(this.value)" autocomplete="off">
-          <div class="cust-dropdown" id="tokCustDropdown"></div>
+        <div style="display:flex;gap:6px;align-items:flex-start">
+          <div class="cust-search-wrap" style="flex:1">
+            <i class="fas fa-search cust-search-icon"></i>
+            <input type="text" class="cust-search-input" id="tokSuppSearchInp"
+              placeholder="Naam ya Mobile likhen..."
+              oninput="tokenCustSearch(this.value)" autocomplete="off">
+            <div class="cust-dropdown" id="tokCustDropdown"></div>
+          </div>
+          <button type="button" class="btn btn-sm" id="tokNewTabBtn" title="Naya Token Shuru Karein (Purana Tab Mein Mehfooz Rahega)"
+            style="background:var(--warning);color:white;flex-shrink:0;padding:9px 12px;display:none"
+            onclick="addNewTokenTab()">
+            <i class="fas fa-plus-circle"></i>
+          </button>
         </div>
         <div id="tokCustChip" style="margin-top:4px"></div>
       </div>
@@ -4139,7 +4190,7 @@ var JsBarcode = BarcodeGen.render;
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('tokenModal')">Cancel</button>
+      <button class="btn btn-ghost" onclick="closeTokenModal()">Cancel</button>
       <button class="btn btn-blue" onclick="saveToken('save')">
         <i class="fas fa-save"></i> Save
       </button>
@@ -5398,24 +5449,196 @@ document.addEventListener('click', e => {
   }
 });
 
+// Admin ko hamesha sab kuch allow, staff ko sirf jo permission diya gaya ho
+function hasPerm(p) {
+  if (!STATE.user) return false;
+  if (STATE.user.role === 'Admin') return true;
+  return (STATE.user.permissions || []).includes(p);
+}
+
+function closeSaleModal() {
+  if (ACTIVE_TAB_ID) {
+    captureFormIntoTab(ACTIVE_TAB_ID);
+    saveTabsToStorage();
+  }
+  closeModal('saleModal');
+}
+
 function openNewSale() {
+  openModal('saleModal');
+  if (!SALE_TABS.length) {
+    createBlankTabAndActivate();
+  } else {
+    if (!SALE_TABS.find(t => t.id === ACTIVE_TAB_ID)) ACTIVE_TAB_ID = SALE_TABS[0].id;
+    loadTabIntoForm(SALE_TABS.find(t => t.id === ACTIVE_TAB_ID));
+  }
+  renderSaleTabs();
+  setTimeout(() => document.getElementById('custSearchInp').focus(), 200);
+}
 
+// ====== MULTIPLE SALE TABS (niche tab-bar) ======
+// Har bill ek "tab" hai. Achanak koi doosra customer aa jaye to naya tab khol lein —
+// purana bill apne aap tab mein mehfooz rehta hai, jab chahein wapas us tab pe click karke resume karein.
+let SALE_TABS   = JSON.parse(localStorage.getItem('saleTabs') || '[]');
+let ACTIVE_TAB_ID = localStorage.getItem('activeSaleTabId') || null;
+
+function saveTabsToStorage() {
+  localStorage.setItem('saleTabs', JSON.stringify(SALE_TABS));
+  localStorage.setItem('activeSaleTabId', ACTIVE_TAB_ID || '');
+}
+
+// Live input/select values ko HTML attributes mein copy karta hai,
+// taake innerHTML snapshot lene par bhi values save ho jayein
+function syncFormValuesToAttributes(container) {
+  container.querySelectorAll('input, select, textarea').forEach(el => {
+    if (el.type === 'checkbox' || el.type === 'radio') {
+      if (el.checked) el.setAttribute('checked', 'checked'); else el.removeAttribute('checked');
+    } else if (el.tagName === 'SELECT') {
+      Array.from(el.options).forEach(opt => {
+        if (opt.value === el.value) opt.setAttribute('selected', 'selected'); else opt.removeAttribute('selected');
+      });
+    } else if (el.tagName === 'TEXTAREA') {
+      el.textContent = el.value;
+    } else {
+      el.setAttribute('value', el.value);
+    }
+  });
+}
+
+function countValidSaleRows(rows) {
+  let c = 0;
+  rows.forEach(r => {
+    const searchInp = r.querySelector('.srow-search');
+    const svcInp    = r.querySelector('.service-name-inp');
+    if ((searchInp && searchInp.dataset.productId) || (svcInp && svcInp.value.trim())) c++;
+  });
+  return c;
+}
+
+function resetSaleFormToBlank() {
   clearCustomer();
-
   document.getElementById('saleItemsBody').innerHTML = '';
   document.getElementById('saleNotes').value = '';
-
   document.getElementById('saleAmountPaid').value = 0;
   document.getElementById('saleTxnId').value = '';
-
   document.getElementById('salePaymentMethod').value = 'Cash';
   document.getElementById('txnIdField').style.display = 'none';
+}
+
+function captureFormIntoTab(tabId) {
+  const tab = SALE_TABS.find(t => t.id === tabId);
+  if (!tab) return;
+  const tbody = document.getElementById('saleItemsBody');
+  syncFormValuesToAttributes(tbody);
+  const rows = tbody.querySelectorAll('tr');
+  tab.customerId      = document.getElementById('saleCustomerId').value;
+  tab.customerName    = document.getElementById('saleCustomerName').value || document.getElementById('custSearchInp').value || '';
+  tab.custSearchVal   = document.getElementById('custSearchInp').value;
+  tab.custChipHtml    = document.getElementById('custSelectedChip').innerHTML;
+  tab.itemsHtml       = tbody.innerHTML;
+  tab.itemCount       = countValidSaleRows(rows);
+  tab.notes           = document.getElementById('saleNotes').value;
+  tab.paymentMethod   = document.getElementById('salePaymentMethod').value;
+  tab.amountPaid      = document.getElementById('saleAmountPaid').value;
+  tab.txnId           = document.getElementById('saleTxnId').value;
+  tab.txnFieldVisible = document.getElementById('txnIdField').style.display !== 'none';
+  tab.savedAt         = Date.now();
+}
+
+function loadTabIntoForm(tab) {
+  document.getElementById('saleCustomerId').value       = tab.customerId || '';
+  document.getElementById('saleCustomerName').value     = tab.customerName || '';
+  document.getElementById('custSearchInp').value        = tab.custSearchVal || '';
+  document.getElementById('custSelectedChip').innerHTML = tab.custChipHtml || '';
+  document.getElementById('saleItemsBody').innerHTML    = tab.itemsHtml || '';
+  document.getElementById('saleNotes').value             = tab.notes || '';
+  document.getElementById('salePaymentMethod').value     = tab.paymentMethod || 'Cash';
+  document.getElementById('saleAmountPaid').value        = tab.amountPaid || 0;
+  document.getElementById('saleTxnId').value              = tab.txnId || '';
+  document.getElementById('txnIdField').style.display     = tab.txnFieldVisible ? 'block' : 'none';
   calcSaleTotal();
+}
 
+function createBlankTabAndActivate() {
+  const tab = {
+    id: 'tab_' + genId(), customerId:'', customerName:'', custSearchVal:'', custChipHtml:'',
+    itemsHtml:'', itemCount:0, notes:'', paymentMethod:'Cash', amountPaid:0, txnId:'',
+    txnFieldVisible:false, savedAt: Date.now()
+  };
+  SALE_TABS.push(tab);
+  ACTIVE_TAB_ID = tab.id;
+  resetSaleFormToBlank();
   addSaleRow('part');
-  openModal('saleModal');
+  captureFormIntoTab(tab.id);
+  saveTabsToStorage();
+  renderSaleTabs();
+}
 
-  setTimeout(() => document.getElementById('custSearchInp').focus(), 200);
+function switchToTab(id) {
+  if (id === ACTIVE_TAB_ID) return;
+  if (ACTIVE_TAB_ID) captureFormIntoTab(ACTIVE_TAB_ID);
+  ACTIVE_TAB_ID = id;
+  loadTabIntoForm(SALE_TABS.find(t => t.id === id));
+  saveTabsToStorage();
+  renderSaleTabs();
+}
+
+function addNewTab() {
+  if (ACTIVE_TAB_ID) captureFormIntoTab(ACTIVE_TAB_ID);
+  createBlankTabAndActivate();
+  showToast('🆕 Naya bill shuru — purana bill tab mein mehfooz hai', 'success');
+  setTimeout(() => document.getElementById('custSearchInp').focus(), 150);
+}
+
+function closeTab(id, ev) {
+  if (ev) ev.stopPropagation();
+  const idx = SALE_TABS.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  const tab = SALE_TABS[idx];
+  if (tab.itemCount > 0 || tab.customerName) {
+    if (!confirm('Yeh bill band karna hai? Ismein add kiya hua data delete ho jayega.')) return;
+  }
+  SALE_TABS.splice(idx, 1);
+  if (id === ACTIVE_TAB_ID) {
+    if (SALE_TABS.length) {
+      ACTIVE_TAB_ID = SALE_TABS[Math.max(0, idx - 1)].id;
+      loadTabIntoForm(SALE_TABS.find(t => t.id === ACTIVE_TAB_ID));
+    } else {
+      createBlankTabAndActivate();
+    }
+  }
+  saveTabsToStorage();
+  renderSaleTabs();
+}
+
+// Sale complete/save hone ke baad uska tab hamesha ke liye hata dena
+function removeActiveTabAfterSave() {
+  SALE_TABS = SALE_TABS.filter(t => t.id !== ACTIVE_TAB_ID);
+  ACTIVE_TAB_ID = SALE_TABS.length ? SALE_TABS[0].id : null;
+  saveTabsToStorage();
+}
+
+function renderSaleTabs() {
+  const wrap = document.getElementById('saleTabsBar');
+  if (!wrap) return;
+  wrap.innerHTML = SALE_TABS.map(t => {
+    const active = t.id === ACTIVE_TAB_ID;
+    const label  = t.customerName ? t.customerName : 'Naya Bill';
+    const countBadge = t.itemCount > 0
+      ? `<span style="background:${active ? 'rgba(255,255,255,0.28)' : 'var(--primary)'};color:#fff;font-size:10px;font-weight:800;padding:1px 6px;border-radius:10px;margin-left:4px">${t.itemCount}</span>`
+      : '';
+    return `
+      <div onclick="switchToTab('${t.id}')" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;white-space:nowrap;flex-shrink:0;
+        background:${active ? 'var(--primary)' : 'var(--bg)'};color:${active ? '#fff' : 'var(--text)'};border:1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}">
+        <i class="fas fa-receipt" style="font-size:11px"></i>
+        <span style="max-width:110px;overflow:hidden;text-overflow:ellipsis">${label}</span>
+        ${countBadge}
+        <i class="fas fa-times" title="Band Karein" style="font-size:10px;margin-left:2px;opacity:0.75;padding:2px" onclick="closeTab('${t.id}', event)"></i>
+      </div>`;
+  }).join('') + `
+      <div onclick="addNewTab()" title="Naya Bill Shuru Karein" style="display:flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:800;flex-shrink:0;background:var(--bg);color:var(--success);border:1.5px dashed var(--success)">
+        <i class="fas fa-plus"></i>
+      </div>`;
 }
 
 function addSaleRow(type = 'part') {
@@ -5789,6 +6012,7 @@ async function saveSale(action = 'complete') {
   addAuditLog('Sale', `${invoiceNo} - ${fmt(total)} - ${customerName}`);
   saveAllData();
   hideLoader();
+  removeActiveTabAfterSave();
   closeModal('saleModal');
   showToast(`${invoiceNo} save ho gai! ✓`, 'success');
   if (action === 'print') setTimeout(() => printInvoice(sale.id), 300);
@@ -6724,10 +6948,61 @@ function renderStockTable(products) {
           <button class="btn btn-red btn-sm" onclick="openStockLoss('${p.id}')" title="Loss / Damage">
             <i class="fas fa-exclamation-triangle"></i>
           </button>
+          ${hasPerm('Stock:Delete') ? `<button class="btn btn-sm" style="background:#7f1d1d;color:white" onclick="openDeleteProductPin('${p.id}')" title="Product Delete Karein (PIN Protected)">
+            <i class="fas fa-trash-alt"></i>
+          </button>` : ''}
         </div>
       </td>
     </tr>`;
   }).join('');
+}
+
+let _deleteProductTargetId = '';
+
+function openDeleteProductPin(id) {
+  if (!hasPerm('Stock:Delete')) { showToast('Aapke paas yeh permission nahi hai!', 'error'); return; }
+  const p = STATE.products.find(x => x.id === id);
+  if (!p) return;
+  _deleteProductTargetId = id;
+  document.getElementById('delProdName').textContent = p.model || p.name || p.brand || 'Product';
+  const pinInp = document.getElementById('delProdPin');
+  const errEl  = document.getElementById('delProdErr');
+  if (pinInp) pinInp.value = '';
+  if (errEl) errEl.style.display = 'none';
+  openModal('deleteProductPinModal');
+  setTimeout(() => document.getElementById('delProdPin')?.focus(), 150);
+}
+
+async function confirmDeleteProductPin() {
+  const pinInp = document.getElementById('delProdPin');
+  const errEl  = document.getElementById('delProdErr');
+  const pin = pinInp ? pinInp.value.trim() : '';
+
+  if (pin !== getHardResetPin()) {
+    if (errEl) errEl.style.display = 'block';
+    if (pinInp) { pinInp.value = ''; pinInp.focus(); }
+    return;
+  }
+
+  const id = _deleteProductTargetId;
+  const p  = STATE.products.find(x => x.id === id);
+  if (!p) { closeModal('deleteProductPinModal'); return; }
+
+  showLoader('Product delete ho raha hai...');
+  if (CONFIG.scriptUrl) {
+    await apiPost('deleteProduct', { id, deletedBy: STATE.user?.username || 'admin' });
+  }
+
+  STATE.recycleBin.push({ type: 'Product', name: p.model || p.name, data: p, deletedAt: new Date().toLocaleDateString() });
+  STATE.products = STATE.products.filter(x => x.id !== id);
+  addAuditLog('Delete', 'Product: ' + (p.model || p.name) + ' delete kiya (Stock Delete permission)');
+  saveAllData();
+
+  hideLoader();
+  closeModal('deleteProductPinModal');
+  showToast((p.model || p.name) + ' delete ho gaya! ✓', 'success');
+  renderStock();
+  if (STATE.currentPage === 'dashboard') renderDashboard();
 }
 
 function openAddProduct() {
@@ -7671,7 +7946,7 @@ function renderStaff() {
 function openAddStaff() {
   document.getElementById('staffModalTitle').textContent = 'New Staff Add Karein';
   document.getElementById('staffUserId').value = '';
-  const perms = ['Sales:View','Sales:Add','Sales:Edit','Sales:Delete','Purchase:View','Purchase:Add','Stock:View','Stock:Add','Customers:View','Customers:Add','Suppliers:View','Reports:View'];
+  const perms = ['Sales:View','Sales:Add','Sales:Edit','Sales:Delete','Purchase:View','Purchase:Add','Stock:View','Stock:Add','Stock:Delete','Customers:View','Customers:Add','Suppliers:View','Reports:View'];
   document.getElementById('permGrid').innerHTML = perms.map(function(p) {
     return '<div class="perm-item"><input type="checkbox" id="perm_' + p.replace(':','_') + '" value="' + p + '"><label for="perm_' + p.replace(':','_') + '" style="font-size:12px">' + p + '</label></div>';
   }).join('');
@@ -7694,7 +7969,7 @@ function openEditStaff(id) {
   document.getElementById('staffLoginFrom').value = u.loginFrom || '';
   document.getElementById('staffLoginTo').value   = u.loginTo   || '';
   if (document.getElementById('staffRole')) document.getElementById('staffRole').value = u.role || 'Staff';
-  const perms = ['Sales:View','Sales:Add','Sales:Edit','Sales:Delete','Purchase:View','Purchase:Add','Stock:View','Stock:Add','Customers:View','Customers:Add','Suppliers:View','Reports:View'];
+  const perms = ['Sales:View','Sales:Add','Sales:Edit','Sales:Delete','Purchase:View','Purchase:Add','Stock:View','Stock:Add','Stock:Delete','Customers:View','Customers:Add','Suppliers:View','Reports:View'];
   document.getElementById('permGrid').innerHTML = perms.map(function(p) {
     const checked = (u.permissions||[]).includes(p) ? 'checked' : '';
     return '<div class="perm-item"><input type="checkbox" ' + checked + ' id="perm_' + p.replace(':','_') + '" value="' + p + '"><label for="perm_' + p.replace(':','_') + '" style="font-size:12px">' + p + '</label></div>';
@@ -7773,14 +8048,22 @@ function renderCategoryList() {
 }
 function addCategory() {
   const val = document.getElementById('newCatInput').value.trim();
-  if (!val || STATE.categories.includes(val)) { showToast('Category already exists ya khali hai!', 'warning'); return; }
+  if (!val) { showToast('Category ka naam likhein!', 'warning'); return; }
+  if (STATE.categories.some(c => c.toLowerCase() === val.toLowerCase())) {
+    showToast('Yeh category pehle se maujood hai!', 'warning');
+    return;
+  }
   STATE.categories.push(val);
   document.getElementById('newCatInput').value = '';
   saveAllData(); renderCategoryList(); populateCategoryFilters();
+  if (CONFIG.scriptUrl) apiPost('addCategory', { name: val });
+  showToast('Category "' + val + '" add ho gai! \u2713', 'success');
 }
 function deleteCategory(i) {
+  const name = STATE.categories[i];
   STATE.categories.splice(i, 1);
   saveAllData(); renderCategoryList(); populateCategoryFilters();
+  if (CONFIG.scriptUrl && name) apiPost('deleteCategory', { name });
 }
 
 async function backupNow() {
@@ -9746,7 +10029,18 @@ function nextTokenNo() {
   return 'TKN-' + String(n).padStart(4, '0');
 }
 
-function openTokenModal() {
+// ====== REPAIR TOKEN — MULTIPLE TABS (Sale jaisa hi) ======
+// Naya token bante waqt agar achanak koi customer aa jaye, to purana (adhoora) token
+// tab mein mehfooz ho jata hai aur naya khali token shuru ho jata hai.
+let TOKEN_TABS         = JSON.parse(localStorage.getItem('tokenTabs') || '[]');
+let ACTIVE_TOKEN_TAB_ID = localStorage.getItem('activeTokenTabId') || null;
+
+function saveTokenTabsToStorage() {
+  localStorage.setItem('tokenTabs', JSON.stringify(TOKEN_TABS));
+  localStorage.setItem('activeTokenTabId', ACTIVE_TOKEN_TAB_ID || '');
+}
+
+function resetTokenFormToBlank() {
   document.getElementById('tokenId').value = '';
   document.getElementById('tokCustChip').innerHTML = '';
   document.getElementById('tokSuppSearchInp').value = '';
@@ -9759,11 +10053,150 @@ function openTokenModal() {
   document.getElementById('tokFinalAmount').value = '';
   document.getElementById('tokNotes').value = '';
   document.getElementById('tokStatus').value = 'Pending';
-
   const now = new Date();
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
   document.getElementById('tokDateTime').value = now.toISOString().slice(0,16);
+}
+
+function captureFormIntoTokenTab(tabId) {
+  const tab = TOKEN_TABS.find(t => t.id === tabId);
+  if (!tab) return;
+  tab.custName     = document.getElementById('tokCustName').value;
+  tab.custMobile   = document.getElementById('tokCustMobile').value;
+  tab.custSearchVal= document.getElementById('tokSuppSearchInp').value;
+  tab.custChipHtml = document.getElementById('tokCustChip').innerHTML;
+  tab.brand        = document.getElementById('tokDeviceBrand').value;
+  tab.model        = document.getElementById('tokDeviceModel').value;
+  tab.problem      = document.getElementById('tokProblem').value;
+  tab.estCharges   = document.getElementById('tokEstCharges').value;
+  tab.finalAmount  = document.getElementById('tokFinalAmount').value;
+  tab.notes        = document.getElementById('tokNotes').value;
+  tab.status       = document.getElementById('tokStatus').value;
+  tab.dateTime     = document.getElementById('tokDateTime').value;
+  tab.savedAt      = Date.now();
+}
+
+function loadTokenTabIntoForm(tab) {
+  document.getElementById('tokenId').value          = '';
+  document.getElementById('tokCustName').value       = tab.custName || '';
+  document.getElementById('tokCustMobile').value     = tab.custMobile || '';
+  document.getElementById('tokSuppSearchInp').value  = tab.custSearchVal || '';
+  document.getElementById('tokCustChip').innerHTML   = tab.custChipHtml || '';
+  document.getElementById('tokDeviceBrand').value    = tab.brand || '';
+  document.getElementById('tokDeviceModel').value    = tab.model || '';
+  document.getElementById('tokProblem').value        = tab.problem || '';
+  document.getElementById('tokEstCharges').value     = tab.estCharges || '';
+  document.getElementById('tokFinalAmount').value    = tab.finalAmount || '';
+  document.getElementById('tokNotes').value           = tab.notes || '';
+  document.getElementById('tokStatus').value          = tab.status || 'Pending';
+  document.getElementById('tokDateTime').value        = tab.dateTime || '';
+}
+
+function createBlankTokenTabAndActivate() {
+  const tab = {
+    id: 'ttab_' + genId(), custName:'', custMobile:'', custSearchVal:'', custChipHtml:'',
+    brand:'', model:'', problem:'', estCharges:'', finalAmount:'', notes:'', status:'Pending',
+    dateTime:'', savedAt: Date.now()
+  };
+  TOKEN_TABS.push(tab);
+  ACTIVE_TOKEN_TAB_ID = tab.id;
+  resetTokenFormToBlank();
+  tab.dateTime = document.getElementById('tokDateTime').value;
+  saveTokenTabsToStorage();
+  renderTokenTabs();
+}
+
+function switchToTokenTab(id) {
+  if (id === ACTIVE_TOKEN_TAB_ID) return;
+  if (ACTIVE_TOKEN_TAB_ID) captureFormIntoTokenTab(ACTIVE_TOKEN_TAB_ID);
+  ACTIVE_TOKEN_TAB_ID = id;
+  loadTokenTabIntoForm(TOKEN_TABS.find(t => t.id === id));
+  saveTokenTabsToStorage();
+  renderTokenTabs();
+}
+
+function addNewTokenTab() {
+  if (ACTIVE_TOKEN_TAB_ID) captureFormIntoTokenTab(ACTIVE_TOKEN_TAB_ID);
+  createBlankTokenTabAndActivate();
+  showToast('🆕 Naya token shuru — purana tab mein mehfooz hai', 'success');
+  setTimeout(() => document.getElementById('tokSuppSearchInp').focus(), 150);
+}
+
+function closeTokenTab(id, ev) {
+  if (ev) ev.stopPropagation();
+  const idx = TOKEN_TABS.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  const tab = TOKEN_TABS[idx];
+  if (tab.custName || tab.problem) {
+    if (!confirm('Yeh token band karna hai? Ismein add kiya hua data delete ho jayega.')) return;
+  }
+  TOKEN_TABS.splice(idx, 1);
+  if (id === ACTIVE_TOKEN_TAB_ID) {
+    if (TOKEN_TABS.length) {
+      ACTIVE_TOKEN_TAB_ID = TOKEN_TABS[Math.max(0, idx - 1)].id;
+      loadTokenTabIntoForm(TOKEN_TABS.find(t => t.id === ACTIVE_TOKEN_TAB_ID));
+    } else {
+      createBlankTokenTabAndActivate();
+    }
+  }
+  saveTokenTabsToStorage();
+  renderTokenTabs();
+}
+
+function removeActiveTokenTabAfterSave() {
+  TOKEN_TABS = TOKEN_TABS.filter(t => t.id !== ACTIVE_TOKEN_TAB_ID);
+  ACTIVE_TOKEN_TAB_ID = TOKEN_TABS.length ? TOKEN_TABS[0].id : null;
+  saveTokenTabsToStorage();
+}
+
+function renderTokenTabs() {
+  const wrap = document.getElementById('tokenTabsBar');
+  const btn  = document.getElementById('tokNewTabBtn');
+  if (!wrap) return;
+
+  // Editing an existing saved token — tabs system band rakho
+  if (document.getElementById('tokenId').value) {
+    wrap.style.display = 'none';
+    if (btn) btn.style.display = 'none';
+    return;
+  }
+
+  wrap.style.display = 'flex';
+  if (btn) btn.style.display = 'inline-flex';
+
+  wrap.innerHTML = TOKEN_TABS.map(t => {
+    const active = t.id === ACTIVE_TOKEN_TAB_ID;
+    const label  = t.custName ? t.custName : 'Naya Token';
+    return `
+      <div onclick="switchToTokenTab('${t.id}')" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;white-space:nowrap;flex-shrink:0;
+        background:${active ? 'var(--primary)' : 'var(--bg)'};color:${active ? '#fff' : 'var(--text)'};border:1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}">
+        <i class="fas fa-ticket-alt" style="font-size:11px"></i>
+        <span style="max-width:110px;overflow:hidden;text-overflow:ellipsis">${label}</span>
+        <i class="fas fa-times" title="Band Karein" style="font-size:10px;margin-left:2px;opacity:0.75;padding:2px" onclick="closeTokenTab('${t.id}', event)"></i>
+      </div>`;
+  }).join('') + `
+      <div onclick="addNewTokenTab()" title="Naya Token Shuru Karein" style="display:flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:800;flex-shrink:0;background:var(--bg);color:var(--success);border:1.5px dashed var(--success)">
+        <i class="fas fa-plus"></i>
+      </div>`;
+}
+
+function closeTokenModal() {
+  if (!document.getElementById('tokenId').value && ACTIVE_TOKEN_TAB_ID) {
+    captureFormIntoTokenTab(ACTIVE_TOKEN_TAB_ID);
+    saveTokenTabsToStorage();
+  }
+  closeModal('tokenModal');
+}
+
+function openTokenModal() {
   openModal('tokenModal');
+  if (!TOKEN_TABS.length) {
+    createBlankTokenTabAndActivate();
+  } else {
+    if (!TOKEN_TABS.find(t => t.id === ACTIVE_TOKEN_TAB_ID)) ACTIVE_TOKEN_TAB_ID = TOKEN_TABS[0].id;
+    loadTokenTabIntoForm(TOKEN_TABS.find(t => t.id === ACTIVE_TOKEN_TAB_ID));
+  }
+  renderTokenTabs();
   setTimeout(function(){ document.getElementById('tokSuppSearchInp')?.focus(); }, 150);
 }
 
@@ -9786,7 +10219,9 @@ function editToken(id) {
     '<i class="fas fa-user"></i> ' + t.custName +
     '<button onclick="clearTokenCustomerChip()"><i class="fas fa-times"></i></button></span>' : '';
   openModal('tokenModal');
+  renderTokenTabs();
 }
+
 
 async function saveToken(action) {
   const id        = document.getElementById('tokenId').value;
@@ -9833,6 +10268,7 @@ async function saveToken(action) {
     };
     STATE.tokens.push(token);
     addAuditLog('Token Created', token.tokenNo + ' - ' + custName + ' - ' + (brand+' '+model));
+    removeActiveTokenTabAfterSave();
   }
 
   saveTokenData();
